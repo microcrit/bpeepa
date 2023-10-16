@@ -1,0 +1,19 @@
+{
+  "name": "bpeepa",
+  "version": "1.0.0",
+  "description": "Blacket Patching, Extension, Extras and Parsing Architecture",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/generator": "^7.23.0",
+    "acorn": "^8.10.0",
+    "acorn-jsx": "^5.3.2",
+    "undici": "^5.26.3"
+  }
+}
