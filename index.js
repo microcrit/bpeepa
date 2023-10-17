@@ -16,6 +16,10 @@ import Module from "node:module";
 
 import { minify as terser } from 'terser';
 
+import postcss from 'postcss';
+import safe from 'postcss-safe-parser';
+import min from 'postcss-minify';
+
 const generate = beanstewart.default;
 const acorn = beanstewarter;
 
@@ -24,6 +28,10 @@ const args = parseArgs({
         plugins: {
             type: 'string',
             short: 'p',
+        },
+        styles: {
+            type: 'string',
+            short: 's',
         },
         minify: {
             type: 'boolean',
@@ -180,6 +188,8 @@ const repos = await repo.body.json();
 const plugins = args.plugins.split(',').map(x => x.trim());
 let all = [];
 
+let repo_cache = [];
+
 for (const repox of repos) {
     process.stdout.clearLine();
     process.stdout.write('\rLoading repo ' + repox);
@@ -187,6 +197,11 @@ for (const repox of repos) {
     try {
         const repo = await request("https://raw.githubusercontent.com/" + repox + "/main/PLUGINS.json");
         const plugins = await repo.body.json();
+        repo_cache.push({
+            repo: repox,
+            plugins: plugins,
+            styles: plugins.styles || []
+        });
 
         for (const dep of plugins.deps) {
             process.stdout.clearLine();
@@ -386,14 +401,89 @@ fs.cpSync(path.join(__dirname, "src"), path.join(__dirname, "dist"), {
     recursive: true
 });
 
-try {
-    fs.rmSync(path.join(__dirname, 'src'), { recursive: true });
-} catch (e) { }
-try {
-    fs.mkdirSync(path.join(__dirname, 'src'));
-} catch (e) { }
-
 process.stdout.clearLine();
 process.stdout.write('\rCleaning up... Done!\n');
 
 process.stdout.write('Done!\n');
+
+process.stdout.write('Starting CSS parsing...\n');
+
+const cssFiles = [];
+
+function traverseDirCSS(dir) {
+    fs.readdirSync(dir).forEach(file => {
+        if (fs.lstatSync(path.join(dir, file)).isDirectory()) {
+            traverseDirCSS(path.join(dir, file));
+        } else {
+            if (file.endsWith('.css') && !file.includes('node_modules')) {
+                cssFiles.push(path.join(dir, file));
+            }
+        }
+    });
+}
+
+traverseDirCSS(path.join(__dirname, 'dist'));
+
+let astifiedCss = [];
+
+for (const file of cssFiles) {
+    astifiedCss.push({
+        file: file.replace(path.join(__dirname, 'dist'), '').replaceAll('\\', '/').slice(1),
+        ast: postcss.parse(fs.readFileSync(file, 'utf8'), { parser: safe })
+    });
+}
+
+let moddedCss = [];
+
+process.stdout.write('Loading styles from repos...');
+
+let addedStyles = args.styles.split(',').map(x => x.trim());
+for (const cache of repo_cache) {
+    for (const style of cache.styles) {
+        if (!addedStyles.includes(style)) continue;
+        process.stdout.clearLine();
+        process.stdout.write('\rLoading style ' + style + ' from repo ' + cache.repo + '...');
+        try {
+            const txt = await (await request("https://raw.githubusercontent.com/" + cache.repo + "/main/" + style + ".bcss")).body.text();
+            moddedCss.push({
+                name: style,
+                css: txt
+            });
+        } catch (e) {
+            process.stdout.clearLine();
+            process.stdout.write('\rLoading style ' + style + ' from repo ' + cache.repo + '... Failed! Skipping...');
+        }
+    }    
+}
+
+process.stdout.clearLine();
+process.stdout.write('\rLoading styles from repos... Done!\n');
+
+for (const ast of astifiedCss) {
+    for (let mod of moddedCss) {
+        if (mod.css.startsWith('{PATCH ' + ast.file + '}')) {
+            mod.css = mod.css.replace('{PATCH ' + ast.file + '}', '');     
+            ast.ast = ast.ast.append(postcss.parse(mod.css, { parser: safe }));
+        }
+    }
+}
+
+process.stdout.clearLine();
+process.stdout.write('\rCompiling CSS...\n');
+
+let stringifiedCss = [];
+for (const ast of astifiedCss) {
+    stringifiedCss.push({
+        file: ast.file,
+        css: ast.ast.toString()
+    });
+}
+
+for (const stringed in stringifiedCss) {
+    let compiled = await postcss([min()]).process(stringifiedCss[stringed].css, { parser: safe }).css;
+    stringifiedCss[stringed].css = compiled;
+    fs.writeFileSync(path.join(__dirname, 'dist', stringifiedCss[stringed].file), compiled);
+}
+
+process.stdout.clearLine();
+process.stdout.write('\rDone!\n');
