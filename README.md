@@ -15,6 +15,10 @@ npm i
 node . --plugins Plugin1,Plugin2,etc
 ```
 
+After running, you may set up your server by changing the configuration settings. Refer to the [official guide](https://github.com/XoticLLC/Blacket).
+
+**Note**: Do not package this into an NPM module. It will write files solely to its own directory. BPeepa depends on the use of __dirname for safe access to paths regardless of current directory, and it is meant to be used locally.
+
 <h5><strong>///</strong> dev</h5>
 
 Please refer to <a href="https://github.com/probablyacai/peepa-repo/blob/main/BeanLoader.js">the example plugin</a> for help.
