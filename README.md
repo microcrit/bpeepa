@@ -12,7 +12,7 @@ mkdir peepa-server
 cd peepa-server
 git clone https://github.com/probablyacai/bpeepa.git .
 npm i
-node . --plugins Plugin1,Plugin2,etc
+node . --plugins Plugin1,Plugin2,etc --styles Style1,Style2,etc
 ```
 
 After running, you may set up your server by changing the configuration settings. Refer to the [official guide](https://github.com/XoticLLC/Blacket).
@@ -23,6 +23,9 @@ After running, you may set up your server by changing the configuration settings
 
 Please refer to <a href="https://github.com/probablyacai/peepa-repo/blob/main/BeanLoader.js">the example plugin</a> for help.
 If you need further help with AST, please refer to the <a href="https://github.com/babel/babel/blob/main/packages/babel-parser/ast/spec.md">Babel AST spec</a>.
+
+Stylesheets are in a beta state. Please write them as normal with a ```.bcss``` extension.    
+Add {PATCH file/file/etc} to the top to specify a file.
 
 <h5><strong>///</strong> collect</h5>
 
